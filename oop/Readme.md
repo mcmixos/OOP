@@ -15,6 +15,20 @@ BankAccount(AbstractAccount)
 - проверка статуса аккаунта
 - __str__ с ифнормацией об аккаунте
 
+SavingsAccount(BankAccount)
+- min_balance — минимальный остаток
+- monthly_rate — месячная ставка
+- apply_monthly_interest() — начисление процентов
+
+PremiumAccount(BankAccount)
+- withdrawal_limit — лимит на разовое снятие
+- overdraft_limit — допустимый овердрафт (уход в минус по счету)
+- commission — фиксированная комиссия
+
+InvestmentAccount(BankAccount)
+- portfolio — пока просто словарь {AssetType: сумма}
+- project_yearly_growth() — прогноз годовой доходности на основе имеющихся активов
+
 ---
 ### Exceptions
 
@@ -25,8 +39,15 @@ BankAccount(AbstractAccount)
 ---
 ### Demo
 
-Демонстрация сама производится при старте скрипта:
+Демонстрация производится при старте каждого скрипта:
+
+bank_account.py:
 - Создаются два аккаунта (активный и замороженный)
-- Выводится по ним инфа через __str__
 - Проводятся операции со счетами
 - Операции по замороженному акку блокируются
+
+bank_account_types.py:
+- Создаются счета каждого типа
+- Начисляются проценты на SavingsAccount
+- Снятие с комиссией и овердрафтом на Premium
+- Прогноз доходности по активам InvestmentAccount
