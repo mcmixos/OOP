@@ -1,3 +1,4 @@
+from decimal import Decimal
 from enum import Enum
 
 from bank_account import (
@@ -15,23 +16,23 @@ class AssetType(Enum):
     ETF = "etf"
 
 ASSET_GROWTH_RATES = {
-    AssetType.STOCKS: 0.10,
-    AssetType.BONDS: 0.04,
-    AssetType.ETF: 0.07,
+    AssetType.STOCKS: Decimal("0.10"),
+    AssetType.BONDS: Decimal("0.04"),
+    AssetType.ETF: Decimal("0.07"),
 }
 
 
 class SavingsAccount(BankAccount):
     """Savings account with minimum balance and monthly interest."""
 
-    def __init__(self, owner, *, min_balance=0, monthly_rate=0.005, **kwargs):
+    def __init__(self, owner, *, min_balance=0, monthly_rate="0.005", **kwargs):
         super().__init__(owner, **kwargs)
-        self._min_balance = min_balance
-        self._monthly_rate = monthly_rate
+        self._min_balance = Decimal(str(min_balance))
+        self._monthly_rate = Decimal(str(monthly_rate))
 
     def withdraw(self, amount):
         self._ensure_active()
-        self._validate_amount(amount)
+        amount = self._validate_amount(amount)
         if self._balance - amount < self._min_balance:
             raise InsufficientFundsError()
         self._balance -= amount
@@ -64,13 +65,13 @@ class PremiumAccount(BankAccount):
     def __init__(self, owner, *, withdrawal_limit=1000000,
                  overdraft_limit=50000, commission=100, **kwargs):
         super().__init__(owner, **kwargs)
-        self._withdrawal_limit = withdrawal_limit
-        self._overdraft_limit = overdraft_limit
-        self._commission = commission
+        self._withdrawal_limit = Decimal(str(withdrawal_limit))
+        self._overdraft_limit = Decimal(str(overdraft_limit))
+        self._commission = Decimal(str(commission))
 
     def withdraw(self, amount):
         self._ensure_active()
-        self._validate_amount(amount)
+        amount = self._validate_amount(amount)
         if amount > self._withdrawal_limit:
             raise InvalidOperationError()
         total = amount + self._commission
@@ -100,18 +101,20 @@ class InvestmentAccount(BankAccount):
 
     def __init__(self, owner, *, portfolio=None, **kwargs):
         super().__init__(owner, **kwargs)
-        self._portfolio: dict[AssetType, float] = portfolio or {}
+        self._portfolio: dict[AssetType, Decimal] = {
+            k: Decimal(str(v)) for k, v in (portfolio or {}).items()
+        }
 
     def project_yearly_growth(self):
-        projected = 0
+        growth = Decimal("0")
         for asset_type, amount in self._portfolio.items():
-            rate = ASSET_GROWTH_RATES.get(asset_type, 0)
-            projected += amount * (1 + rate)
-        return projected
+            rate = ASSET_GROWTH_RATES.get(asset_type, Decimal("0"))
+            growth += amount * rate
+        return growth
 
     def withdraw(self, amount):
         self._ensure_active()
-        self._validate_amount(amount)
+        amount = self._validate_amount(amount)
         if amount > self._balance:
             raise InsufficientFundsError()
         self._balance -= amount

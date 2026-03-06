@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 from enum import Enum
 
 
@@ -41,12 +42,12 @@ class AbstractAccount:
         owner: str,
         *,
         account_id: str | None = None,
-        balance: float = 0.0,
+        balance: Decimal = Decimal("0"),
         status: AccountStatus = AccountStatus.ACTIVE,
     ) -> None:
         self._account_id: str = account_id or uuid.uuid4().hex[:8]
         self._owner: str = owner
-        self._balance: float = balance
+        self._balance: Decimal = balance
         self._status: AccountStatus = status
 
     @property
@@ -58,7 +59,7 @@ class AbstractAccount:
         return self._owner
 
     @property
-    def balance(self) -> float:
+    def balance(self) -> Decimal:
         return self._balance
 
     @property
@@ -83,14 +84,15 @@ class BankAccount(AbstractAccount):
         owner: str,
         *,
         account_id: str | None = None,
-        balance: float = 0.0,
+        balance=0,
         status: AccountStatus = AccountStatus.ACTIVE,
         currency: Currency = Currency.RUB,
     ) -> None:
         if not isinstance(owner, str) or not owner.strip():
             raise InvalidOperationError()
-        if not isinstance(balance, (int, float)):
+        if not isinstance(balance, (int, float, Decimal)):
             raise InvalidOperationError()
+        balance = Decimal(str(balance))
         if balance < 0:
             raise InvalidOperationError()
         self._validate_type(status, AccountStatus, "status")
@@ -126,11 +128,13 @@ class BankAccount(AbstractAccount):
             raise AccountClosedError()
 
     @staticmethod
-    def _validate_amount(amount: float) -> None:
-        if not isinstance(amount, (int, float)):
+    def _validate_amount(amount) -> Decimal:
+        if not isinstance(amount, (int, float, Decimal)):
             raise InvalidOperationError()
+        amount = Decimal(str(amount))
         if amount <= 0:
             raise InvalidOperationError()
+        return amount
 
     @staticmethod
     def _validate_type(value, expected_type: type, name: str) -> None:
@@ -142,14 +146,14 @@ class BankAccount(AbstractAccount):
         return self._currency
 
 
-    def deposit(self, amount: float) -> None:
+    def deposit(self, amount) -> None:
         self._ensure_active()
-        self._validate_amount(amount)
+        amount = self._validate_amount(amount)
         self._balance += amount
 
-    def withdraw(self, amount: float) -> None:
+    def withdraw(self, amount) -> None:
         self._ensure_active()
-        self._validate_amount(amount)
+        amount = self._validate_amount(amount)
         if amount > self._balance:
             raise InsufficientFundsError()
         self._balance -= amount
