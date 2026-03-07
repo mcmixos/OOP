@@ -66,10 +66,10 @@ class AbstractAccount:
     def status(self) -> AccountStatus:
         return self._status
 
-    def deposit(self, amount: float) -> None:
+    def deposit(self, amount: int | float | Decimal) -> None:
         raise NotImplementedError
 
-    def withdraw(self, amount: float) -> None:
+    def withdraw(self, amount: int | float | Decimal) -> None:
         raise NotImplementedError
 
     def get_account_info(self) -> dict:
@@ -128,7 +128,7 @@ class BankAccount(AbstractAccount):
             raise AccountClosedError()
 
     @staticmethod
-    def _validate_amount(amount) -> Decimal:
+    def _validate_amount(amount: int | float | Decimal) -> Decimal:
         if not isinstance(amount, (int, float, Decimal)):
             raise InvalidOperationError()
         amount = Decimal(str(amount))
@@ -146,12 +146,12 @@ class BankAccount(AbstractAccount):
         return self._currency
 
 
-    def deposit(self, amount) -> None:
+    def deposit(self, amount: int | float | Decimal) -> None:
         self._ensure_active()
         amount = self._validate_amount(amount)
         self._balance += amount
 
-    def withdraw(self, amount) -> None:
+    def withdraw(self, amount: int | float | Decimal) -> None:
         self._ensure_active()
         amount = self._validate_amount(amount)
         if amount > self._balance:
@@ -162,7 +162,7 @@ class BankAccount(AbstractAccount):
         return {
             "account_id": self._account_id,
             "owner": self._owner,
-            "balance": self._balance,
+            "balance": str(self._balance),
             "currency": self._currency.value,
             "status": self._status.value,
         }

@@ -26,11 +26,19 @@ class SavingsAccount(BankAccount):
     """Savings account with minimum balance and monthly interest."""
 
     def __init__(self, owner, *, min_balance=0, monthly_rate="0.005", **kwargs):
+        min_balance = Decimal(str(min_balance))
+        monthly_rate = Decimal(str(monthly_rate))
+        if min_balance < 0:
+            raise InvalidOperationError()
+        if monthly_rate < 0:
+            raise InvalidOperationError()
         super().__init__(owner, **kwargs)
-        self._min_balance = Decimal(str(min_balance))
-        self._monthly_rate = Decimal(str(monthly_rate))
+        if self._balance < min_balance:
+            raise InvalidOperationError()
+        self._min_balance = min_balance
+        self._monthly_rate = monthly_rate
 
-    def withdraw(self, amount):
+    def withdraw(self, amount: int | float | Decimal):
         self._ensure_active()
         amount = self._validate_amount(amount)
         if self._balance - amount < self._min_balance:
@@ -45,8 +53,8 @@ class SavingsAccount(BankAccount):
 
     def get_account_info(self):
         info = super().get_account_info()
-        info["min_balance"] = self._min_balance
-        info["monthly_rate"] = self._monthly_rate
+        info["min_balance"] = str(self._min_balance)
+        info["monthly_rate"] = str(self._monthly_rate)
         return info
 
     def __str__(self):
@@ -64,12 +72,21 @@ class PremiumAccount(BankAccount):
 
     def __init__(self, owner, *, withdrawal_limit=1000000,
                  overdraft_limit=50000, commission=100, **kwargs):
+        withdrawal_limit = Decimal(str(withdrawal_limit))
+        overdraft_limit = Decimal(str(overdraft_limit))
+        commission = Decimal(str(commission))
+        if withdrawal_limit <= 0:
+            raise InvalidOperationError()
+        if overdraft_limit < 0:
+            raise InvalidOperationError()
+        if commission < 0:
+            raise InvalidOperationError()
         super().__init__(owner, **kwargs)
-        self._withdrawal_limit = Decimal(str(withdrawal_limit))
-        self._overdraft_limit = Decimal(str(overdraft_limit))
-        self._commission = Decimal(str(commission))
+        self._withdrawal_limit = withdrawal_limit
+        self._overdraft_limit = overdraft_limit
+        self._commission = commission
 
-    def withdraw(self, amount):
+    def withdraw(self, amount: int | float | Decimal):
         self._ensure_active()
         amount = self._validate_amount(amount)
         if amount > self._withdrawal_limit:
@@ -81,9 +98,9 @@ class PremiumAccount(BankAccount):
 
     def get_account_info(self):
         info = super().get_account_info()
-        info["withdrawal_limit"] = self._withdrawal_limit
-        info["overdraft_limit"] = self._overdraft_limit
-        info["commission"] = self._commission
+        info["withdrawal_limit"] = str(self._withdrawal_limit)
+        info["overdraft_limit"] = str(self._overdraft_limit)
+        info["commission"] = str(self._commission)
         return info
 
     def __str__(self):
@@ -101,18 +118,21 @@ class InvestmentAccount(BankAccount):
 
     def __init__(self, owner, *, portfolio=None, **kwargs):
         super().__init__(owner, **kwargs)
-        self._portfolio: dict[AssetType, Decimal] = {
-            k: Decimal(str(v)) for k, v in (portfolio or {}).items()
-        }
+        raw = portfolio or {}
+        self._portfolio: dict[AssetType, Decimal] = {}
+        for k, v in raw.items():
+            if not isinstance(k, AssetType):
+                raise InvalidOperationError()
+            self._portfolio[k] = Decimal(str(v))
 
-    def project_yearly_growth(self):
+    def project_yearly_growth(self) -> Decimal:
         growth = Decimal("0")
         for asset_type, amount in self._portfolio.items():
             rate = ASSET_GROWTH_RATES.get(asset_type, Decimal("0"))
             growth += amount * rate
         return growth
 
-    def withdraw(self, amount):
+    def withdraw(self, amount: int | float | Decimal):
         self._ensure_active()
         amount = self._validate_amount(amount)
         if amount > self._balance:
@@ -121,8 +141,8 @@ class InvestmentAccount(BankAccount):
 
     def get_account_info(self):
         info = super().get_account_info()
-        info["portfolio"] = {k.value: v for k, v in self._portfolio.items()}
-        info["portfolio_value"] = sum(self._portfolio.values())
+        info["portfolio"] = {k.value: str(v) for k, v in self._portfolio.items()}
+        info["portfolio_value"] = str(sum(self._portfolio.values()))
         return info
 
     def __str__(self):
