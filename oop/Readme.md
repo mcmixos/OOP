@@ -2,61 +2,72 @@
 
 **Python >= 3.10** (используется `str | None` синтаксис)
 
+### Структура
+
+| Файл | Описание |
+|---|---|
+| `bank_account.py` | AbstractAccount, BankAccount, исключения, enum'ы |
+| `bank_account_types.py` | SavingsAccount, PremiumAccount, InvestmentAccount |
+| `bank_system.py` | Client, Bank — управление клиентами и безопасность |
+| `demo.py` | Демонстрация всей системы |
+
 ### Архитектура
 
 AbstractAccount
 - account_id, owner, balance (Decimal), status
 - автогенерация 8-символьного hex UUID
-- deposit() - абстрактный
-- withdraw() - абстрактный
-- get_account_info() - абстрактный
+- deposit(), withdraw(), get_account_info() — абстрактные
 
 BankAccount(AbstractAccount)
 - currency (RUB, USD, EUR, KZT, CNY)
-- валидация всех входных данных
+- валидация входных данных
 - проверка статуса аккаунта
-- __str__ с информацией об аккаунте
 
 SavingsAccount(BankAccount)
-- min_balance — минимальный остаток (валидируется)
-- monthly_rate — месячная ставка (валидируется)
-- apply_monthly_interest() — начисление процентов
+- min_balance, monthly_rate (валидируются)
+- apply_monthly_interest()
 
 PremiumAccount(BankAccount)
-- withdrawal_limit — лимит на разовое снятие (валидируется)
-- overdraft_limit — допустимый овердрафт (валидируется)
-- commission — фиксированная комиссия (валидируется)
+- withdrawal_limit, overdraft_limit, commission (валидируются)
 
 InvestmentAccount(BankAccount)
-- portfolio — словарь {AssetType: сумма}, ключи валидируются
-- project_yearly_growth() — прогноз годовой доходности (только прирост)
+- portfolio {AssetType: сумма}, ключи валидируются
+- project_yearly_growth() — только прирост
+
+Client
+- ФИО, ID, дата рождения (>= 18 лет), PIN (4 цифры)
+- список счетов, контакты
+- блокировка после 3 неудачных попыток входа
+
+Bank
+- add_client, open_account, close_account, freeze_account, unfreeze_account
+- authenticate_client — 3 ошибки = блокировка
+- transfer — перевод между счетами
+- search_accounts — поиск по client_id
+- get_total_balance, get_clients_ranking
+
+---
+### Безопасность
+
+- Ночные операции (00:00–05:00) блокируются
+- Переводы выше порога не-контакту логируются как подозрительные
 
 ---
 ### Типы данных
 
-Все денежные значения хранятся как Decimal. На вход принимаются int, float, Decimal.
+Все денежные значения — Decimal. На вход принимаются int, float, Decimal.
 
-get_account_info() возвращает JSON-сериализуемый dict (все Decimal конвертируются в str)
+get_account_info() возвращает JSON-сериализуемый dict (Decimal → str)
 
 ---
 ### Exceptions
 
-Все наследуются от базового AccountError
+Все банковские исключения наследуются от AccountError.
 
-В методах BankAccount служат сейчас плейсхолдерами вместо более конкретных ошибок
+Системные: AuthenticationError, ClientBlockedError, NightOperationError.
 
 ---
-### Demo
+### Запуск
 
-Демонстрация производится при старте каждого скрипта:
-
-bank_account.py:
-- Создаются два аккаунта (активный и замороженный)
-- Проводятся операции со счетами
-- Операции по замороженному акку блокируются
-
-bank_account_types.py:
-- Создаются счета каждого типа
-- Начисляются проценты на SavingsAccount
-- Снятие с комиссией и овердрафтом на Premium
-- Прогноз доходности по активам InvestmentAccount
+```bash
+python demo.py

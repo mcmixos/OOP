@@ -166,31 +166,3 @@ class BankAccount(AbstractAccount):
             "currency": self._currency.value,
             "status": self._status.value,
         }
-
-
-if __name__ == "__main__":
-    print("Demo \n")
-
-    acc = BankAccount("Petrov Ivan", balance=10000.0, currency=Currency.RUB)
-    print(f"Active account created:\n  {acc}\n")
-
-    acc.deposit(500)
-    print(f"After depositing 500:\n  {acc}\n")
-
-    acc.withdraw(200)
-    print(f"After withdrawing 200:\n  {acc}\n")
-
-    frozen = BankAccount(
-        "Ivanov Petr",
-        balance=5000.0,
-        status=AccountStatus.FROZEN,
-        currency=Currency.USD,
-    )
-    print(f"Frozen account created:\n  {frozen}\n")
-
-    for operation_name, operation in [("deposit", lambda: frozen.deposit(100)),
-                                      ("withdraw", lambda: frozen.withdraw(50))]:
-        try:
-            operation()
-        except AccountFrozenError as exc:
-            print(f"Attempted {operation_name} on frozen account: {exc}")

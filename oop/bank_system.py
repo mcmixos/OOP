@@ -14,14 +14,11 @@ from bank_account import (
 class AuthenticationError(Exception):
     """Authentication failed."""
 
-
 class ClientBlockedError(Exception):
     """Client is blocked due to failed login attempts."""
 
-
 class NightOperationError(Exception):
     """Operation rejected — night hours (00:00–05:00)."""
-
 
 class Client:
     """Bank client with personal data, accounts and contacts."""
@@ -79,11 +76,13 @@ class Bank:
         self._suspicious_log: list[dict] = []
         self._suspicious_threshold = Decimal(str(suspicious_threshold))
 
+
     def _check_night(self, is_night: bool | None = None) -> None:
         if is_night is None:
             is_night = self.NIGHT_START <= datetime.now().hour < self.NIGHT_END
         if is_night:
             raise NightOperationError()
+
 
     def add_client(self, client: Client, *, is_night: bool | None = None) -> None:
         self._check_night(is_night)
@@ -105,6 +104,7 @@ class Bank:
             raise AuthenticationError()
         client.failed_attempts = 0
         return client
+
 
     def open_account(
         self,
@@ -145,6 +145,7 @@ class Bank:
         client = self._clients[client_id]
         return [self._accounts[aid] for aid in client.account_ids if aid in self._accounts]
 
+
     def transfer(
         self,
         from_account_id: str,
@@ -176,6 +177,7 @@ class Bank:
         self._accounts[from_account_id].withdraw(amount)
         self._accounts[to_account_id].deposit(amount)
 
+
     def get_total_balance(self, client_id: str) -> Decimal:
         accounts = self.search_accounts(client_id)
         return sum((acc.balance for acc in accounts), Decimal("0"))
@@ -191,66 +193,3 @@ class Bank:
     @property
     def suspicious_log(self) -> list[dict]:
         return list(self._suspicious_log)
-
-
-if __name__ == "__main__":
-    print("=== Bank Demo ===\n")
-
-    bank = Bank(suspicious_threshold=50000)
-
-    client1 = Client(
-        "Petrov Ivan",
-        "C001",
-        date(1990, 5, 15),
-        "1234",
-        contacts=["C002"],
-    )
-    client2 = Client(
-        "Sidorov Anton",
-        "C002",
-        date(1985, 8, 20),
-        "5678",
-    )
-
-    bank.add_client(client1, is_night=False)
-    bank.add_client(client2, is_night=False)
-    print(f"  {client1}")
-    print(f"  {client2}\n")
-
-    acc1 = BankAccount("Petrov Ivan", account_id="ACC001", balance=200000, currency=Currency.RUB)
-    acc2 = BankAccount("Sidorov Anton", account_id="ACC002", balance=50000, currency=Currency.RUB)
-
-    bank.open_account("C001", acc1, is_night=False)
-    bank.open_account("C002", acc2, is_night=False)
-    print(f"  {acc1}")
-    print(f"  {acc2}\n")
-
-    authenticated = bank.authenticate_client("C001", "1234")
-    print(f"  Authenticated: {authenticated.name}")
-
-    try:
-        bank.authenticate_client("C001", "0000")
-    except AuthenticationError:
-        print("  Wrong pin — auth failed")
-
-    bank.transfer("ACC001", "ACC002", 60000, sender_client_id="C001", receiver_client_id="C002", is_night=False)
-    print(f"\n  After transfer 60000 (C001→C002, contact):")
-    print(f"  {acc1}")
-    print(f"  {acc2}")
-    print(f"  Suspicious log: {bank.suspicious_log}")
-
-    bank.transfer("ACC002", "ACC001", 55000, sender_client_id="C002", receiver_client_id="C001", is_night=False)
-    print(f"\n  After transfer 55000 (C002→C001, non-contact, above threshold):")
-    print(f"  {acc1}")
-    print(f"  {acc2}")
-    print(f"  Suspicious log: {bank.suspicious_log}")
-
-    bank.freeze_account("ACC002", is_night=False)
-    print(f"\n  After freezing ACC002: {acc2}")
-
-    print(f"\n  Ranking: {bank.get_clients_ranking()}")
-
-    try:
-        bank.open_account("C001", BankAccount("Test", account_id="ACC003"), is_night=True)
-    except NightOperationError:
-        print("  Night operation blocked")
