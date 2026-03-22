@@ -182,7 +182,7 @@ class TransactionProcessor:
             return amount
         from_rate = EXCHANGE_RATES[from_currency]
         to_rate = EXCHANGE_RATES[to_currency]
-        return amount / from_rate * to_rate
+        return (amount / from_rate * to_rate).quantize(Decimal("0.01"))
 
 
     def process(self, txn: Transaction) -> None:
@@ -272,6 +272,11 @@ class TransactionProcessor:
 
     @staticmethod
     def _withdraw_with_check(account: BankAccount, amount: Decimal) -> None:
-        if not isinstance(account, PremiumAccount) and account.balance < amount:
-            raise InsufficientFundsError()
-        account.withdraw(amount)
+        account._ensure_active()
+        if isinstance(account, PremiumAccount):
+            if amount > account.balance + account._overdraft_limit:
+                raise InsufficientFundsError()
+        else:
+            if amount > account.balance:
+                raise InsufficientFundsError()
+        account._balance -= amount

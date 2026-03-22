@@ -132,9 +132,6 @@ class InvestmentAccount(BankAccount):
             growth += amount * rate
         return growth
 
-    def withdraw(self, amount: int | float | Decimal):
-        super().withdraw(amount)
-
     def get_account_info(self):
         info = super().get_account_info()
         info["portfolio"] = {k.value: str(v) for k, v in self._portfolio.items()}
