@@ -1,6 +1,6 @@
 """Demo for the bank account system."""
 
-from datetime import date
+from datetime import date, datetime, timedelta
 
 from bank_account import (
     AccountFrozenError,
@@ -19,6 +19,13 @@ from bank_system import (
     Bank,
     Client,
     NightOperationError,
+)
+from transaction import (
+    Priority,
+    Transaction,
+    TransactionProcessor,
+    TransactionQueue,
+    TransactionType,
 )
 
 
@@ -166,3 +173,44 @@ if __name__ == "__main__":
         bank.open_account("C001", BankAccount("Test", account_id="ACC003"), is_night=True)
     except NightOperationError:
         print("  Night operation blocked")
+
+
+    print("\n\n=== Transactions ===\n")
+
+    t_acc1 = BankAccount("Alice", account_id="T1", balance=500000, currency=Currency.RUB)
+    t_acc2 = BankAccount("Bob", account_id="T2", balance=100000, currency=Currency.USD)
+    accounts = {"T1": t_acc1, "T2": t_acc2}
+
+    processor = TransactionProcessor(accounts)
+    queue = TransactionQueue()
+
+    transactions = [
+        Transaction(TransactionType.DEPOSIT, 10000, Currency.RUB, receiver_account_id="T1"),
+        Transaction(TransactionType.WITHDRAWAL, 5000, Currency.RUB, sender_account_id="T1"),
+        Transaction(TransactionType.TRANSFER, 20000, Currency.RUB, sender_account_id="T1", receiver_account_id="T2"),
+        Transaction(TransactionType.TRANSFER, 50000, Currency.RUB, sender_account_id="T1", is_external=True),
+        Transaction(TransactionType.DEPOSIT, 1000, Currency.USD, receiver_account_id="T2", priority=Priority.HIGH),
+        Transaction(TransactionType.WITHDRAWAL, 500, Currency.USD, sender_account_id="T2", priority=Priority.LOW),
+        Transaction(TransactionType.TRANSFER, 10000, Currency.RUB, sender_account_id="T1", receiver_account_id="T2"),
+        Transaction(TransactionType.DEPOSIT, 3000, Currency.RUB, receiver_account_id="T1"),
+        Transaction(TransactionType.WITHDRAWAL, 2000, Currency.RUB, sender_account_id="T1"),
+        Transaction(
+            TransactionType.DEPOSIT, 500, Currency.RUB, receiver_account_id="T1",
+            scheduled_at=datetime.now() - timedelta(seconds=1),
+        ),
+    ]
+
+    for txn in transactions:
+        queue.add(txn)
+
+    print(f"  Queue: {queue.pending_count} pending, {queue.delayed_count} delayed")
+    results = processor.process_queue(queue)
+
+    completed = [t for t in results if t.status.value == "completed"]
+    failed = [t for t in results if t.status.value == "failed"]
+    print(f"  Processed: {len(completed)} completed, {len(failed)} failed")
+    print(f"  T1 balance: {t_acc1.balance}")
+    print(f"  T2 balance: {t_acc2.balance}")
+
+    if processor.error_log:
+        print(f"  Errors: {processor.error_log}")
