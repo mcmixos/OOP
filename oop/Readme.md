@@ -16,12 +16,12 @@
 AbstractAccount
 - account_id, owner, balance (Decimal), status
 - автогенерация 8-символьного hex UUID
-- deposit(), withdraw(), get_account_info() — абстрактные
 
 BankAccount(AbstractAccount)
 - currency (RUB, USD, EUR, KZT, CNY)
 - валидация входных данных
 - проверка статуса аккаунта
+- set_status() — публичный метод смены статуса
 
 SavingsAccount(BankAccount)
 - min_balance, monthly_rate (валидируются)
@@ -37,12 +37,13 @@ InvestmentAccount(BankAccount)
 Client
 - ФИО, ID, дата рождения (>= 18 лет), PIN (4 цифры)
 - список счетов, контакты
+- status — property: "active" / "blocked"
 - блокировка после 3 неудачных попыток входа
 
 Bank
 - add_client, open_account, close_account, freeze_account, unfreeze_account
 - authenticate_client — 3 ошибки = блокировка
-- transfer — перевод между счетами
+- transfer — проверка владельца счета, атомарный откат при ошибке
 - search_accounts — поиск по client_id
 - get_total_balance, get_clients_ranking
 
@@ -71,3 +72,4 @@ get_account_info() возвращает JSON-сериализуемый dict (De
 
 ```bash
 python demo.py
+```
