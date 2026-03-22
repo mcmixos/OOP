@@ -127,6 +127,10 @@ class BankAccount(AbstractAccount):
         if self._status is AccountStatus.CLOSED:
             raise AccountClosedError()
 
+    def set_status(self, status: AccountStatus) -> None:
+        self._validate_type(status, AccountStatus, "status")
+        self._status = status
+
     @staticmethod
     def _validate_amount(amount: int | float | Decimal) -> Decimal:
         if not isinstance(amount, (int, float, Decimal)):

@@ -54,7 +54,10 @@ class Client:
         self.account_ids: list[str] = []
         self.is_blocked = False
         self.failed_attempts = 0
-        self.status = "active"
+
+    @property
+    def status(self) -> str:
+        return "blocked" if self.is_blocked else "active"
 
     def __str__(self) -> str:
         return (
@@ -125,19 +128,19 @@ class Bank:
         self._check_night(is_night)
         if account_id not in self._accounts:
             raise InvalidOperationError()
-        self._accounts[account_id]._status = AccountStatus.CLOSED
+        self._accounts[account_id].set_status(AccountStatus.CLOSED)
 
     def freeze_account(self, account_id: str, *, is_night: bool | None = None) -> None:
         self._check_night(is_night)
         if account_id not in self._accounts:
             raise InvalidOperationError()
-        self._accounts[account_id]._status = AccountStatus.FROZEN
+        self._accounts[account_id].set_status(AccountStatus.FROZEN)
 
     def unfreeze_account(self, account_id: str, *, is_night: bool | None = None) -> None:
         self._check_night(is_night)
         if account_id not in self._accounts:
             raise InvalidOperationError()
-        self._accounts[account_id]._status = AccountStatus.ACTIVE
+        self._accounts[account_id].set_status(AccountStatus.ACTIVE)
 
     def search_accounts(self, client_id: str) -> list[BankAccount]:
         if client_id not in self._clients:
@@ -160,10 +163,13 @@ class Bank:
         if from_account_id not in self._accounts or to_account_id not in self._accounts:
             raise InvalidOperationError()
 
-        amount = Decimal(str(amount))
         sender = self._clients.get(sender_client_id)
         if not sender:
             raise InvalidOperationError()
+        if from_account_id not in sender.account_ids:
+            raise InvalidOperationError()
+
+        amount = Decimal(str(amount))
 
         if (amount >= self._suspicious_threshold
                 and receiver_client_id not in sender.contacts):
@@ -174,8 +180,15 @@ class Bank:
                 "reason": "high amount to non-contact",
             })
 
-        self._accounts[from_account_id].withdraw(amount)
-        self._accounts[to_account_id].deposit(amount)
+        from_acc = self._accounts[from_account_id]
+        to_acc = self._accounts[to_account_id]
+
+        from_acc.withdraw(amount)
+        try:
+            to_acc.deposit(amount)
+        except Exception:
+            from_acc.deposit(amount)
+            raise
 
 
     def get_total_balance(self, client_id: str) -> Decimal:

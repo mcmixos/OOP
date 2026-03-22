@@ -133,11 +133,7 @@ class InvestmentAccount(BankAccount):
         return growth
 
     def withdraw(self, amount: int | float | Decimal):
-        self._ensure_active()
-        amount = self._validate_amount(amount)
-        if amount > self._balance:
-            raise InsufficientFundsError()
-        self._balance -= amount
+        super().withdraw(amount)
 
     def get_account_info(self):
         info = super().get_account_info()
