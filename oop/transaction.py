@@ -20,11 +20,15 @@ class TransactionType(Enum):
     TRANSFER = "transfer"
     DEPOSIT = "deposit"
     WITHDRAWAL = "withdrawal"
+
+
 class TransactionStatus(Enum):
     PENDING = "pending"
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
+
+
 class Priority(Enum):
     HIGH = 1
     NORMAL = 2
@@ -272,9 +276,14 @@ class TransactionProcessor:
 
     @staticmethod
     def _withdraw_with_check(account: BankAccount, amount: Decimal) -> None:
+        """Deduct amount directly, bypassing account-level commission.
+
+        Mutates account._balance directly to avoid double commission
+        when PremiumAccount.withdraw() would add its own fee on top.
+        """
         account._ensure_active()
         if isinstance(account, PremiumAccount):
-            if amount > account.balance + account._overdraft_limit:
+            if amount > account.balance + account.overdraft_limit:
                 raise InsufficientFundsError()
         else:
             if amount > account.balance:

@@ -9,6 +9,7 @@
 | `bank_account.py` | AbstractAccount, BankAccount, исключения, enum'ы |
 | `bank_account_types.py` | SavingsAccount, PremiumAccount, InvestmentAccount |
 | `bank_system.py` | Client, Bank — управление клиентами и безопасность |
+| `transaction.py` | Transaction, TransactionQueue, TransactionProcessor |
 | `demo.py` | Демонстрация всей системы |
 
 ### Архитектура
@@ -46,6 +47,22 @@ Bank
 - transfer — проверка владельца счета, атомарный откат при ошибке
 - search_accounts — поиск по client_id
 - get_total_balance, get_clients_ranking
+
+Transaction
+- ID, тип (transfer/deposit/withdrawal), сумма, валюта, комиссия
+- отправитель, получатель, is_external
+- статус (pending/completed/failed/cancelled), причина отказа
+- приоритет (high/normal/low), scheduled_at, timestamps
+
+TransactionQueue
+- добавление, приоритет, отложенные операции, отмена
+- release_delayed() — перевод готовых в основную очередь
+
+TransactionProcessor
+- конвертация валют (кросс-курс через USD)
+- комиссия 2% за внешние переводы, внутренние бесплатно
+- повторные попытки (max_retries=3), error_log
+- запрет минуса для обычных счетов (Premium — можно)
 
 ---
 ### Безопасность

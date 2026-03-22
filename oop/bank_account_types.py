@@ -96,6 +96,10 @@ class PremiumAccount(BankAccount):
             raise InsufficientFundsError()
         self._balance -= total
 
+    @property
+    def overdraft_limit(self) -> Decimal:
+        return self._overdraft_limit
+
     def get_account_info(self):
         info = super().get_account_info()
         info["withdrawal_limit"] = str(self._withdrawal_limit)
