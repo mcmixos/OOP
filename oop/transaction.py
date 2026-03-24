@@ -42,6 +42,7 @@ EXCHANGE_RATES = {
     Currency.CNY: Decimal("7.2"),
 }
 
+
 class Transaction:
     """Single financial transaction."""
 
@@ -98,6 +99,7 @@ class Transaction:
             f"Transaction {self.txn_id} | {self.txn_type.value} | "
             f"{self.amount} {self.currency.value} | {self.status.value}"
         )
+
 
 class TransactionQueue:
     """Priority queue with delayed transaction support."""
@@ -156,6 +158,11 @@ class TransactionQueue:
         self._pending.clear()
         return result
 
+
+class RiskBlockedError(Exception):
+    """Transaction blocked due to high risk."""
+
+
 class TransactionProcessor:
     """Processes transactions with commissions, conversion and retries."""
 
@@ -165,11 +172,13 @@ class TransactionProcessor:
         *,
         external_commission_rate: Decimal = Decimal("0.02"),
         max_retries: int = 3,
+        risk_analyzer=None,
     ) -> None:
         self._accounts = accounts
         self._external_commission_rate = external_commission_rate
         self._max_retries = max_retries
         self._error_log: list[dict] = []
+        self._risk_analyzer = risk_analyzer
 
     @property
     def error_log(self) -> list[dict]:
@@ -189,16 +198,31 @@ class TransactionProcessor:
         return (amount / from_rate * to_rate).quantize(Decimal("0.01"))
 
 
-    def process(self, txn: Transaction) -> None:
+    def process(self, txn: Transaction, *, is_night: bool | None = None) -> None:
         if txn.status is not TransactionStatus.PENDING:
             return
 
         try:
             self._validate(txn)
+            if self._risk_analyzer and txn.retries == 0:
+                result = self._risk_analyzer.analyze(txn, is_night=is_night)
+                if result.risk_level.value == "high":
+                    raise RiskBlockedError(f"blocked: {', '.join(result.reasons)}")
             self._calculate_commission(txn)
             self._execute(txn)
             txn.status = TransactionStatus.COMPLETED
             txn.completed_at = datetime.now()
+            if self._risk_analyzer:
+                self._risk_analyzer.register_completed(txn)
+        except RiskBlockedError as exc:
+            txn.status = TransactionStatus.FAILED
+            txn.failure_reason = str(exc)
+            txn.retries = self._max_retries
+            self._error_log.append({
+                "txn_id": txn.txn_id,
+                "error": txn.failure_reason,
+                "retries": txn.retries,
+            })
         except Exception as exc:
             txn.retries += 1
             if txn.retries >= self._max_retries:
@@ -215,12 +239,13 @@ class TransactionProcessor:
         queue: TransactionQueue,
         *,
         current_time: datetime | None = None,
+        is_night: bool | None = None,
     ) -> list[Transaction]:
         queue.release_delayed(current_time=current_time)
         transactions = queue.get_all_pending()
         for txn in transactions:
             while txn.status is TransactionStatus.PENDING:
-                self.process(txn)
+                self.process(txn, is_night=is_night)
         return transactions
 
 

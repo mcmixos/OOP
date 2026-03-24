@@ -27,6 +27,10 @@ from transaction import (
     TransactionQueue,
     TransactionType,
 )
+from audit import (
+    AuditLog,
+    RiskAnalyzer,
+)
 
 
 if __name__ == "__main__":
@@ -214,3 +218,45 @@ if __name__ == "__main__":
 
     if processor.error_log:
         print(f"  Errors: {processor.error_log}")
+
+
+    print("\n\n=== Audit & Risk Analysis ===\n")
+
+    audit_log = AuditLog()
+    analyzer = RiskAnalyzer(audit_log, high_amount_threshold=100000)
+
+    a_acc1 = BankAccount("Petrov", account_id="AU1", balance=1000000, currency=Currency.RUB)
+    a_acc2 = BankAccount("Sidorov", account_id="AU2", balance=500000, currency=Currency.RUB)
+    audit_accounts = {"AU1": a_acc1, "AU2": a_acc2}
+
+    audit_processor = TransactionProcessor(audit_accounts, risk_analyzer=analyzer)
+    audit_queue = TransactionQueue()
+
+    audit_txns = [
+        # safe — small deposit
+        Transaction(TransactionType.DEPOSIT, 5000, Currency.RUB, receiver_account_id="AU1"),
+        # safe — small transfer to known (will become known after first)
+        Transaction(TransactionType.TRANSFER, 3000, Currency.RUB, sender_account_id="AU1", receiver_account_id="AU2"),
+        # medium — high amount
+        Transaction(TransactionType.DEPOSIT, 200000, Currency.RUB, receiver_account_id="AU1"),
+        # medium — new receiver
+        Transaction(TransactionType.TRANSFER, 5000, Currency.RUB, sender_account_id="AU2", receiver_account_id="AU1"),
+        # HIGH — large amount + night → blocked
+        Transaction(TransactionType.WITHDRAWAL, 600000, Currency.RUB, sender_account_id="AU1"),
+    ]
+
+    for txn in audit_txns:
+        audit_queue.add(txn)
+
+    # process first 4 during daytime
+    results = audit_processor.process_queue(audit_queue, is_night=False)
+    print(f"  Daytime batch: {len(results)} processed")
+
+    # process last one at night — should be blocked (high amount + night = HIGH)
+    night_txn = Transaction(TransactionType.WITHDRAWAL, 600000, Currency.RUB, sender_account_id="AU1")
+    audit_processor.process(night_txn, is_night=True)
+    print(f"  Night withdrawal 600k: {night_txn.status.value} — {night_txn.failure_reason}")
+
+    print(f"\n  Suspicious transactions: {len(analyzer.get_suspicious_transactions())}")
+    print(f"  AU1 risk profile: {analyzer.get_client_risk_profile('AU1')}")
+    print(f"  Error stats: {analyzer.get_error_stats()}")
