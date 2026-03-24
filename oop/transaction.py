@@ -13,8 +13,9 @@ from bank_account import (
     Currency,
     InsufficientFundsError,
     InvalidOperationError,
+    to_decimal,
 )
-from bank_account_types import PremiumAccount
+from bank_account_types import PremiumAccount, SavingsAccount
 
 class TransactionType(Enum):
     TRANSFER = "transfer"
@@ -65,7 +66,7 @@ class Transaction:
         if not isinstance(priority, Priority):
             raise InvalidOperationError()
 
-        amount = Decimal(str(amount))
+        amount = to_decimal(amount)
         if amount <= 0:
             raise InvalidOperationError()
 
@@ -269,8 +270,10 @@ class TransactionProcessor:
                 raise AccountClosedError()
 
     def _calculate_commission(self, txn: Transaction) -> None:
-        if txn.is_external:
+        if txn.is_external and txn.txn_type is not TransactionType.DEPOSIT:
             txn.commission = txn.amount * self._external_commission_rate
+        else:
+            txn.commission = Decimal("0")
 
     def _execute(self, txn: Transaction) -> None:
         if txn.txn_type is TransactionType.DEPOSIT:
@@ -281,14 +284,15 @@ class TransactionProcessor:
         elif txn.txn_type is TransactionType.WITHDRAWAL:
             sender = self._accounts[txn.sender_account_id]
             withdraw_amount = self.convert_currency(txn.amount, txn.currency, sender.currency)
-            total = withdraw_amount + txn.commission
-            self._withdraw_with_check(sender, total)
+            commission = self.convert_currency(txn.commission, txn.currency, sender.currency)
+            self._withdraw_with_check(sender, withdraw_amount, commission)
 
         elif txn.txn_type is TransactionType.TRANSFER:
             sender = self._accounts[txn.sender_account_id]
             withdraw_amount = self.convert_currency(txn.amount, txn.currency, sender.currency)
-            total = withdraw_amount + txn.commission
-            self._withdraw_with_check(sender, total)
+            commission = self.convert_currency(txn.commission, txn.currency, sender.currency)
+            total = withdraw_amount + commission
+            self._withdraw_with_check(sender, withdraw_amount, commission)
 
             if not txn.is_external and txn.receiver_account_id:
                 receiver = self._accounts[txn.receiver_account_id]
@@ -300,17 +304,29 @@ class TransactionProcessor:
                     raise
 
     @staticmethod
-    def _withdraw_with_check(account: BankAccount, amount: Decimal) -> None:
-        """Deduct amount directly, bypassing account-level commission.
+    def _withdraw_with_check(
+        account: BankAccount,
+        amount: Decimal,
+        commission: Decimal = Decimal("0"),
+    ) -> None:
+        """Deduct amount + commission directly, respecting account-specific rules.
 
-        Mutates account._balance directly to avoid double commission
-        when PremiumAccount.withdraw() would add its own fee on top.
+        Bypasses account.withdraw() to avoid PremiumAccount adding its own
+        commission on top. Checks withdrawal_limit and min_balance manually.
         """
         account._ensure_active()
+        total = amount + commission
+
         if isinstance(account, PremiumAccount):
-            if amount > account.balance + account.overdraft_limit:
+            if amount > account.withdrawal_limit:
+                raise InvalidOperationError()
+            if total > account.balance + account.overdraft_limit:
+                raise InsufficientFundsError()
+        elif isinstance(account, SavingsAccount):
+            if account.balance - total < account.min_balance:
                 raise InsufficientFundsError()
         else:
-            if amount > account.balance:
+            if total > account.balance:
                 raise InsufficientFundsError()
-        account._balance -= amount
+
+        account._balance -= total

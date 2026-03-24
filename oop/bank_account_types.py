@@ -6,6 +6,7 @@ from bank_account import (
     Currency,
     InsufficientFundsError,
     InvalidOperationError,
+    to_decimal,
 )
 
 
@@ -25,9 +26,9 @@ ASSET_GROWTH_RATES = {
 class SavingsAccount(BankAccount):
     """Savings account with minimum balance and monthly interest."""
 
-    def __init__(self, owner, *, min_balance=0, monthly_rate="0.005", **kwargs):
-        min_balance = Decimal(str(min_balance))
-        monthly_rate = Decimal(str(monthly_rate))
+    def __init__(self, owner, *, min_balance=0, monthly_rate=Decimal("0.005"), **kwargs):
+        min_balance = to_decimal(min_balance)
+        monthly_rate = to_decimal(monthly_rate)
         if min_balance < 0:
             raise InvalidOperationError()
         if monthly_rate < 0:
@@ -44,6 +45,10 @@ class SavingsAccount(BankAccount):
         if self._balance - amount < self._min_balance:
             raise InsufficientFundsError()
         self._balance -= amount
+
+    @property
+    def min_balance(self) -> Decimal:
+        return self._min_balance
 
     def apply_monthly_interest(self):
         self._ensure_active()
@@ -72,9 +77,9 @@ class PremiumAccount(BankAccount):
 
     def __init__(self, owner, *, withdrawal_limit=1000000,
                  overdraft_limit=50000, commission=100, **kwargs):
-        withdrawal_limit = Decimal(str(withdrawal_limit))
-        overdraft_limit = Decimal(str(overdraft_limit))
-        commission = Decimal(str(commission))
+        withdrawal_limit = to_decimal(withdrawal_limit)
+        overdraft_limit = to_decimal(overdraft_limit)
+        commission = to_decimal(commission)
         if withdrawal_limit <= 0:
             raise InvalidOperationError()
         if overdraft_limit < 0:
@@ -99,6 +104,10 @@ class PremiumAccount(BankAccount):
     @property
     def overdraft_limit(self) -> Decimal:
         return self._overdraft_limit
+
+    @property
+    def withdrawal_limit(self) -> Decimal:
+        return self._withdrawal_limit
 
     def get_account_info(self):
         info = super().get_account_info()
@@ -127,7 +136,7 @@ class InvestmentAccount(BankAccount):
         for k, v in raw.items():
             if not isinstance(k, AssetType):
                 raise InvalidOperationError()
-            self._portfolio[k] = Decimal(str(v))
+            self._portfolio[k] = to_decimal(v)
 
     def project_yearly_growth(self) -> Decimal:
         growth = Decimal("0")
@@ -139,12 +148,12 @@ class InvestmentAccount(BankAccount):
     def get_account_info(self):
         info = super().get_account_info()
         info["portfolio"] = {k.value: str(v) for k, v in self._portfolio.items()}
-        info["portfolio_value"] = str(sum(self._portfolio.values()))
+        info["portfolio_value"] = str(sum(self._portfolio.values(), Decimal("0")))
         return info
 
     def __str__(self):
         last4 = self._account_id[-4:]
-        portfolio_value = sum(self._portfolio.values())
+        portfolio_value = sum(self._portfolio.values(), Decimal("0"))
         return (
             f"InvestmentAccount | {self._owner} | "
             f"****{last4} | {self._status.value} | "

@@ -34,6 +34,13 @@ class InsufficientFundsError(AccountError):
     """Not enough funds"""
 
 
+def to_decimal(value) -> Decimal:
+    """Convert a numeric value to Decimal. Rejects bool and str."""
+    if isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
+        raise InvalidOperationError()
+    return Decimal(str(value))
+
+
 class AbstractAccount:
     """Abstract bank account"""
 
@@ -90,9 +97,7 @@ class BankAccount(AbstractAccount):
     ) -> None:
         if not isinstance(owner, str) or not owner.strip():
             raise InvalidOperationError()
-        if not isinstance(balance, (int, float, Decimal)):
-            raise InvalidOperationError()
-        balance = Decimal(str(balance))
+        balance = to_decimal(balance)
         if balance < 0:
             raise InvalidOperationError()
         self._validate_type(status, AccountStatus, "status")
@@ -133,9 +138,7 @@ class BankAccount(AbstractAccount):
 
     @staticmethod
     def _validate_amount(amount: int | float | Decimal) -> Decimal:
-        if not isinstance(amount, (int, float, Decimal)):
-            raise InvalidOperationError()
-        amount = Decimal(str(amount))
+        amount = to_decimal(amount)
         if amount <= 0:
             raise InvalidOperationError()
         return amount
