@@ -188,14 +188,18 @@ class ReportBuilder:
         if not txns:
             return
 
+        convert = TransactionProcessor.convert_currency
         balance = account.balance
         points = []
         for t in reversed(txns):
             points.insert(0, float(balance))
             if t.sender_account_id == account_id:
-                balance += t.amount
+                amount = convert(t.amount, t.currency, account.currency)
+                commission = convert(t.commission, t.currency, account.currency)
+                balance += amount + commission
             elif t.receiver_account_id == account_id:
-                balance -= t.amount
+                amount = convert(t.amount, t.currency, account.currency)
+                balance -= amount
         points.insert(0, float(balance))
 
         fig, ax = plt.subplots(figsize=(10, 6))
