@@ -2,6 +2,8 @@
 
 **Python >= 3.10** (используется `str | None` синтаксис)
 
+**Зависимости:** matplotlib
+
 ### Структура
 
 | Файл | Описание |
@@ -10,6 +12,8 @@
 | `bank_account_types.py` | SavingsAccount, PremiumAccount, InvestmentAccount |
 | `bank_system.py` | Client, Bank — управление клиентами и безопасность |
 | `transaction.py` | Transaction, TransactionQueue, TransactionProcessor |
+| `audit.py` | AuditLog, RiskAnalyzer — аудит и анализ рисков |
+| `report.py` | ReportBuilder — отчёты, экспорт, графики |
 | `demo.py` | Демонстрация всей системы |
 
 ### Архитектура
@@ -63,12 +67,29 @@ TransactionProcessor
 - комиссия 2% за внешние переводы, внутренние бесплатно
 - повторные попытки (max_retries=3), error_log
 - запрет минуса для обычных счетов (Premium — можно)
+- интеграция с RiskAnalyzer — блокировка HIGH-риск операций
+
+AuditLog
+- уровни: INFO, WARNING, CRITICAL
+- хранение в памяти + опциональный JSON-lines файл
+- фильтрация по уровню и времени
+
+RiskAnalyzer
+- крупная сумма, частые операции, новый получатель, ночные операции
+- комбинация 2+ факторов = HIGH → блокировка
+- отчёты: подозрительные операции, риск-профиль клиента, статистика ошибок
+
+ReportBuilder
+- отчёты: по клиенту, по банку, по рискам
+- форматы: текст, JSON, CSV
+- графики: pie (по типу), bar (балансы), line (движение баланса)
 
 ---
 ### Безопасность
 
 - Ночные операции (00:00–05:00) блокируются
 - Переводы выше порога не-контакту логируются как подозрительные
+- HIGH-риск транзакции автоматически отклоняются процессором
 
 ---
 ### Типы данных
@@ -82,7 +103,7 @@ get_account_info() возвращает JSON-сериализуемый dict (De
 
 Все банковские исключения наследуются от AccountError.
 
-Системные: AuthenticationError, ClientBlockedError, NightOperationError.
+Системные: AuthenticationError, ClientBlockedError, NightOperationError, RiskBlockedError.
 
 ---
 ### Запуск
