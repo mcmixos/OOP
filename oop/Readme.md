@@ -109,5 +109,6 @@ get_account_info() возвращает JSON-сериализуемый dict (De
 ### Запуск
 
 ```bash
+python -m unittest discover -s tests -t .
 python demo.py
 ```
