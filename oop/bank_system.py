@@ -6,8 +6,8 @@ from decimal import Decimal
 from bank_account import (
     AccountStatus,
     BankAccount,
-    Currency,
     InvalidOperationError,
+    to_decimal,
 )
 
 
@@ -77,7 +77,7 @@ class Bank:
         self._clients: dict[str, Client] = {}
         self._accounts: dict[str, BankAccount] = {}
         self._suspicious_log: list[dict] = []
-        self._suspicious_threshold = Decimal(str(suspicious_threshold))
+        self._suspicious_threshold = to_decimal(suspicious_threshold)
 
 
     def _check_night(self, is_night: bool | None = None) -> None:
@@ -169,7 +169,7 @@ class Bank:
         if from_account_id not in sender.account_ids:
             raise InvalidOperationError()
 
-        amount = Decimal(str(amount))
+        amount = to_decimal(amount)
 
         if (amount >= self._suspicious_threshold
                 and receiver_client_id not in sender.contacts):
