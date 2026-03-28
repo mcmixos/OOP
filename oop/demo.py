@@ -2,6 +2,7 @@
 
 from datetime import date, datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 
 from bank_account import (
     AccountFrozenError,
@@ -377,20 +378,22 @@ if __name__ == "__main__":
  
  
     print_section("Export")
+
+    Path("reports").mkdir(exist_ok=True)
  
-    builder.export_to_json(bank_report, "demo_bank_report.json")
+    builder.export_to_json(bank_report, "reports/demo_bank_report.json")
     print("  Saved: demo_bank_report.json")
  
-    builder.export_to_json(risk_report, "demo_risk_report.json")
+    builder.export_to_json(risk_report, "reports/demo_risk_report.json")
     print("  Saved: demo_risk_report.json")
  
     csv_rows = [
         {"client_id": c["client_id"], "name": c["name"], "total": c["total"]}
         for c in bank_report["top_clients"]
     ]
-    builder.export_to_csv(csv_rows, "demo_top_clients.csv")
+    builder.export_to_csv(csv_rows, "reports/demo_top_clients.csv")
     print("  Saved: demo_top_clients.csv")
  
-    saved_charts = builder.save_charts("demo_charts")
+    saved_charts = builder.save_charts("reports/demo_charts")
     for path in saved_charts:
         print(f"  Chart: {path}")
