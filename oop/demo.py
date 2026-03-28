@@ -219,7 +219,6 @@ if __name__ == "__main__":
 
     completed = [t for t in results if t.status is TransactionStatus.COMPLETED]
     failed = [t for t in results if t.status is TransactionStatus.FAILED]
-    cancelled_list = [t for t in results if t.status is TransactionStatus.CANCELLED]
 
     print(f"  Processed: {len(results)} transactions")
     print(f"  Completed: {len(completed)}")
