@@ -37,6 +37,7 @@ from audit import (
     AuditLog,
     RiskAnalyzer,
 )
+from report import ReportBuilder
 
 
 def print_header(title):
@@ -347,3 +348,50 @@ if __name__ == "__main__":
         total_by_currency[cur] = total_by_currency.get(cur, Decimal("0")) + acc.balance
     for cur, total in sorted(total_by_currency.items()):
         print(f"  {cur}: {total:.2f}")
+
+
+    print_header("REPORT GENERATION")
+ 
+    builder = ReportBuilder(bank, analyzer, processor)
+ 
+    print_section("Bank report (text)")
+ 
+    bank_report = builder.bank_report()
+    text = builder.format_text(bank_report, "Bank Summary")
+    print(text)
+ 
+ 
+    print_section("Client report — C001")
+ 
+    client_report = builder.client_report("C001")
+    print(f"  Name: {client_report['name']}")
+    print(f"  Accounts: {len(client_report['accounts'])}")
+    print(f"  Transactions: {client_report['transaction_count']}")
+ 
+ 
+    print_section("Risk report")
+ 
+    risk_report = builder.risk_report()
+    print(f"  Distribution: {risk_report['risk_distribution']}")
+    print(f"  Suspicious: {risk_report['suspicious_count']}")
+    print(f"  Errors: {risk_report['error_stats']}")
+ 
+ 
+    print_section("Export")
+ 
+    builder.export_to_json(bank_report, "demo_bank_report.json")
+    print("  Saved: demo_bank_report.json")
+ 
+    builder.export_to_json(risk_report, "demo_risk_report.json")
+    print("  Saved: demo_risk_report.json")
+ 
+    csv_rows = [
+        {"client_id": c["client_id"], "name": c["name"], "total": c["total"]}
+        for c in bank_report["top_clients"]
+    ]
+    builder.export_to_csv(csv_rows, "demo_top_clients.csv")
+    print("  Saved: demo_top_clients.csv")
+ 
+    saved_charts = builder.save_charts("demo_charts")
+    for path in saved_charts:
+        print(f"  Chart: {path}")
