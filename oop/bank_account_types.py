@@ -109,6 +109,10 @@ class PremiumAccount(BankAccount):
     def withdrawal_limit(self) -> Decimal:
         return self._withdrawal_limit
 
+    @property
+    def commission(self) -> Decimal:
+        return self._commission
+
     def get_account_info(self):
         info = super().get_account_info()
         info["withdrawal_limit"] = str(self._withdrawal_limit)

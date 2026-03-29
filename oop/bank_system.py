@@ -4,15 +4,25 @@ from datetime import date, datetime
 from decimal import Decimal
 
 from bank_account import (
+    AccountError,
     AccountStatus,
     BankAccount,
+    Currency,
     InvalidOperationError,
     to_decimal,
 )
 
+from transaction import EXCHANGE_RATES
 
-class AuthenticationError(Exception):
+
+class AuthenticationError(AccountError):
     """Authentication failed."""
+
+class ClientBlockedError(AccountError):
+    """Client is blocked due to failed login attempts."""
+
+class NightOperationError(AccountError):
+    """Operation rejected — night hours (00:00–05:00)."""
 
 class ClientBlockedError(Exception):
     """Client is blocked due to failed login attempts."""
@@ -169,6 +179,12 @@ class Bank:
         if from_account_id not in sender.account_ids:
             raise InvalidOperationError()
 
+        receiver = self._clients.get(receiver_client_id)
+        if not receiver:
+            raise InvalidOperationError()
+        if to_account_id not in receiver.account_ids:
+            raise InvalidOperationError()
+
         amount = to_decimal(amount)
 
         if (amount >= self._suspicious_threshold
@@ -191,14 +207,22 @@ class Bank:
             raise
 
 
-    def get_total_balance(self, client_id: str) -> Decimal:
+    def get_total_balance(self, client_id: str, *, base_currency: Currency = Currency.RUB) -> Decimal:
         accounts = self.search_accounts(client_id)
-        return sum((acc.balance for acc in accounts), Decimal("0"))
+        total = Decimal("0")
+        for acc in accounts:
+            if acc.currency is base_currency:
+                total += acc.balance
+            else:
+                rate_from = EXCHANGE_RATES[acc.currency]
+                rate_to = EXCHANGE_RATES[base_currency]
+                total += (acc.balance / rate_from * rate_to).quantize(Decimal("0.01"))
+        return total
 
-    def get_clients_ranking(self) -> list[tuple[str, Decimal]]:
+    def get_clients_ranking(self, *, base_currency: Currency = Currency.RUB) -> list[tuple[str, Decimal]]:
         ranking = []
         for client_id in self._clients:
-            total = self.get_total_balance(client_id)
+            total = self.get_total_balance(client_id, base_currency=base_currency)
             ranking.append((client_id, total))
         ranking.sort(key=lambda x: x[1], reverse=True)
         return ranking

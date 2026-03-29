@@ -1,4 +1,5 @@
 import uuid
+from abc import ABC, abstractmethod
 from decimal import Decimal
 from enum import Enum
 
@@ -41,7 +42,7 @@ def to_decimal(value) -> Decimal:
     return Decimal(str(value))
 
 
-class AbstractAccount:
+class AbstractAccount(ABC):
     """Abstract bank account"""
 
     def __init__(
@@ -73,14 +74,14 @@ class AbstractAccount:
     def status(self) -> AccountStatus:
         return self._status
 
-    def deposit(self, amount: int | float | Decimal) -> None:
-        raise NotImplementedError
+    @abstractmethod
+    def deposit(self, amount: int | float | Decimal) -> None: ...
 
-    def withdraw(self, amount: int | float | Decimal) -> None:
-        raise NotImplementedError
+    @abstractmethod
+    def withdraw(self, amount: int | float | Decimal) -> None: ...
 
-    def get_account_info(self) -> dict:
-        raise NotImplementedError
+    @abstractmethod
+    def get_account_info(self) -> dict: ...
 
 
 class BankAccount(AbstractAccount):

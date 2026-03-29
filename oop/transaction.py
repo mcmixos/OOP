@@ -6,6 +6,7 @@ from decimal import Decimal
 from enum import Enum
 
 from bank_account import (
+    AccountError,
     AccountFrozenError,
     AccountClosedError,
     AccountStatus,
@@ -160,7 +161,7 @@ class TransactionQueue:
         return result
 
 
-class RiskBlockedError(Exception):
+class RiskBlockedError(AccountError):
     """Transaction blocked due to high risk."""
 
 
@@ -291,8 +292,7 @@ class TransactionProcessor:
             sender = self._accounts[txn.sender_account_id]
             withdraw_amount = self.convert_currency(txn.amount, txn.currency, sender.currency)
             commission = self.convert_currency(txn.commission, txn.currency, sender.currency)
-            total = withdraw_amount + commission
-            self._withdraw_with_check(sender, withdraw_amount, commission)
+            deducted = self._withdraw_with_check(sender, withdraw_amount, commission)
 
             if not txn.is_external and txn.receiver_account_id:
                 receiver = self._accounts[txn.receiver_account_id]
@@ -300,7 +300,7 @@ class TransactionProcessor:
                 try:
                     receiver.deposit(deposit_amount)
                 except Exception:
-                    sender.deposit(total)
+                    sender.deposit(deducted)
                     raise
 
     @staticmethod
@@ -308,11 +308,9 @@ class TransactionProcessor:
         account: BankAccount,
         amount: Decimal,
         commission: Decimal = Decimal("0"),
-    ) -> None:
+    ) -> Decimal:
         """Deduct amount + commission directly, respecting account-specific rules.
-
-        Bypasses account.withdraw() to avoid PremiumAccount adding its own
-        commission on top. Checks withdrawal_limit and min_balance manually.
+        Returns total amount actually deducted.
         """
         account._ensure_active()
         total = amount + commission
@@ -320,6 +318,7 @@ class TransactionProcessor:
         if isinstance(account, PremiumAccount):
             if amount > account.withdrawal_limit:
                 raise InvalidOperationError()
+            total += account.commission
             if total > account.balance + account.overdraft_limit:
                 raise InsufficientFundsError()
         elif isinstance(account, SavingsAccount):
@@ -330,3 +329,4 @@ class TransactionProcessor:
                 raise InsufficientFundsError()
 
         account._balance -= total
+        return total
