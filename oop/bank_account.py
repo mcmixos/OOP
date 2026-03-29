@@ -78,7 +78,7 @@ class AbstractAccount(ABC):
     def deposit(self, amount: int | float | Decimal) -> None: ...
 
     @abstractmethod
-    def withdraw(self, amount: int | float | Decimal) -> None: ...
+    def withdraw(self, amount: int | float | Decimal) -> Decimal: ...
 
     @abstractmethod
     def get_account_info(self) -> dict: ...
@@ -159,12 +159,13 @@ class BankAccount(AbstractAccount):
         amount = self._validate_amount(amount)
         self._balance += amount
 
-    def withdraw(self, amount: int | float | Decimal) -> None:
+    def withdraw(self, amount: int | float | Decimal) -> Decimal:
         self._ensure_active()
         amount = self._validate_amount(amount)
         if amount > self._balance:
             raise InsufficientFundsError()
         self._balance -= amount
+        return amount
 
     def get_account_info(self) -> dict:
         return {

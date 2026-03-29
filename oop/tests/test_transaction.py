@@ -1,4 +1,4 @@
-"""Tests for transaction module"""
+"""Tests for transaction module."""
 
 import unittest
 from datetime import datetime, timedelta
@@ -239,7 +239,6 @@ class TestProcessor(unittest.TestCase):
         )
         self.processor.process(txn)
         self.assertIs(txn.status, TransactionStatus.COMPLETED)
-        # 10000 + 2% commission = 10200 
         self.assertEqual(self.acc1.balance, Decimal("89800"))
         self.assertEqual(txn.commission, Decimal("200"))
 
@@ -299,7 +298,6 @@ class TestProcessor(unittest.TestCase):
         self.processor.process(txn)
         self.processor.process(txn)
         self.processor.process(txn)
-        # balance restored after failed deposit
         self.assertEqual(self.acc1.balance, Decimal("100000"))
 
     def test_completed_at_set(self):
@@ -311,7 +309,6 @@ class TestProcessor(unittest.TestCase):
         txn = Transaction(TransactionType.DEPOSIT, 100, Currency.RUB, receiver_account_id="A1")
         txn.status = TransactionStatus.COMPLETED
         self.processor.process(txn)
-        # balance unchanged
         self.assertEqual(self.acc1.balance, Decimal("100000"))
 
 
@@ -357,7 +354,7 @@ class TestPremiumOverdraft(unittest.TestCase):
         self.assertIs(txn.status, TransactionStatus.FAILED)
         self.assertEqual(acc.balance, Decimal("1000"))
 
-    def test_premium_external_no_double_commission(self):
+    def test_premium_external_with_both_commissions(self):
         acc = PremiumAccount("VIP", account_id="P1", balance=10000, commission=100, overdraft_limit=0)
         processor = TransactionProcessor({"P1": acc})
         txn = Transaction(

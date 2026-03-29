@@ -39,12 +39,13 @@ class SavingsAccount(BankAccount):
         self._min_balance = min_balance
         self._monthly_rate = monthly_rate
 
-    def withdraw(self, amount: int | float | Decimal):
+    def withdraw(self, amount: int | float | Decimal) -> Decimal:
         self._ensure_active()
         amount = self._validate_amount(amount)
         if self._balance - amount < self._min_balance:
             raise InsufficientFundsError()
         self._balance -= amount
+        return amount
 
     @property
     def min_balance(self) -> Decimal:
@@ -91,7 +92,7 @@ class PremiumAccount(BankAccount):
         self._overdraft_limit = overdraft_limit
         self._commission = commission
 
-    def withdraw(self, amount: int | float | Decimal):
+    def withdraw(self, amount: int | float | Decimal) -> Decimal:
         self._ensure_active()
         amount = self._validate_amount(amount)
         if amount > self._withdrawal_limit:
@@ -100,6 +101,7 @@ class PremiumAccount(BankAccount):
         if total > self._balance + self._overdraft_limit:
             raise InsufficientFundsError()
         self._balance -= total
+        return total
 
     @property
     def overdraft_limit(self) -> Decimal:
