@@ -24,12 +24,6 @@ class ClientBlockedError(AccountError):
 class NightOperationError(AccountError):
     """Operation rejected — night hours (00:00–05:00)."""
 
-class ClientBlockedError(Exception):
-    """Client is blocked due to failed login attempts."""
-
-class NightOperationError(Exception):
-    """Operation rejected — night hours (00:00–05:00)."""
-
 class Client:
     """Bank client with personal data, accounts and contacts."""
 

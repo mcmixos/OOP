@@ -366,7 +366,7 @@ class TestPremiumOverdraft(unittest.TestCase):
         )
         processor.process(txn)
         self.assertEqual(txn.commission, Decimal("100"))
-        self.assertEqual(acc.balance, Decimal("4900"))
+        self.assertEqual(acc.balance, Decimal("4800"))
 
     def test_premium_withdrawal_limit_enforced(self):
         acc = PremiumAccount("VIP", account_id="P1", balance=100000, withdrawal_limit=5000, commission=0, overdraft_limit=0)

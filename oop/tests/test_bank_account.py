@@ -17,24 +17,15 @@ from bank_account import (
 
 class TestAbstractAccount(unittest.TestCase):
 
-    def test_can_instantiate(self):
-        acc = AbstractAccount("Test Owner")
-        self.assertEqual(acc.owner, "Test Owner")
+    def test_cannot_instantiate_directly(self):
+        with self.assertRaises(TypeError):
+            AbstractAccount("Test Owner")
 
-    def test_deposit_raises_not_implemented(self):
-        acc = AbstractAccount("Test Owner")
-        with self.assertRaises(NotImplementedError):
-            acc.deposit(100)
-
-    def test_withdraw_raises_not_implemented(self):
-        acc = AbstractAccount("Test Owner")
-        with self.assertRaises(NotImplementedError):
-            acc.withdraw(100)
-
-    def test_get_account_info_raises_not_implemented(self):
-        acc = AbstractAccount("Test Owner")
-        with self.assertRaises(NotImplementedError):
-            acc.get_account_info()
+    def test_subclass_must_implement_methods(self):
+        class Incomplete(AbstractAccount):
+            pass
+        with self.assertRaises(TypeError):
+            Incomplete("Test")
 
 
 class TestBankAccountCreation(unittest.TestCase):
