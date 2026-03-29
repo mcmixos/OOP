@@ -193,11 +193,18 @@ class Bank:
         from_acc = self._accounts[from_account_id]
         to_acc = self._accounts[to_account_id]
 
+        balance_before = from_acc.balance
         from_acc.withdraw(amount)
+        actually_deducted = balance_before - from_acc.balance
         try:
-            to_acc.deposit(amount)
+            if from_acc.currency is to_acc.currency:
+                to_acc.deposit(amount)
+            else:
+                from transaction import TransactionProcessor
+                converted = TransactionProcessor.convert_currency(amount, from_acc.currency, to_acc.currency)
+                to_acc.deposit(converted)
         except Exception:
-            from_acc.deposit(amount)
+            from_acc.deposit(actually_deducted)
             raise
 
 

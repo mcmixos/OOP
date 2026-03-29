@@ -11,6 +11,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from bank_account import BankAccount
+from bank_account_types import PremiumAccount
 from bank_system import Bank
 from transaction import TransactionProcessor, TransactionStatus, TransactionType
 from audit import RiskAnalyzer
@@ -191,12 +192,13 @@ class ReportBuilder:
         convert = TransactionProcessor.convert_currency
         balance = account.balance
         points = []
+        premium_fee = account.commission if isinstance(account, PremiumAccount) else Decimal("0")
         for t in reversed(txns):
             points.insert(0, float(balance))
             if t.sender_account_id == account_id:
                 amount = convert(t.amount, t.currency, account.currency)
                 commission = convert(t.commission, t.currency, account.currency)
-                balance += amount + commission
+                balance += amount + commission + premium_fee
             elif t.receiver_account_id == account_id:
                 amount = convert(t.amount, t.currency, account.currency)
                 balance -= amount
